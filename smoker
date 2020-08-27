@@ -54,7 +54,7 @@ shift $((OPTIND -1))
 
 if [ $# -eq 0 ]
 	then
-    	echo "You must provide the base url"
+    	_smoke_print_report_failure "You must provide the base url"
 		exit 1
 	else
 		base=$1
@@ -71,7 +71,7 @@ fi
 # Smoke setup
 
 echo
-echo "Smoke testing $base/$page"
+_smoke_print_report_success "Smoke testing $base/$page"
 echo
 
 smoke_url_prefix "$base"
