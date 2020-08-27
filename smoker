@@ -1,0 +1,150 @@
+#!/bin/bash
+
+# Load the smoke.sh framework
+
+. smoke.sh
+
+# Help function used to display script help message
+
+smoke_help()
+{
+   # Display Help
+   echo "Run smoke tests against a resource."
+   echo
+   echo "Syntax: cmd [-h] [-d] [-S|H] <baseUrl> <page>"
+   echo
+   echo "Options:"
+   echo
+   echo "h     Print this help."
+   echo "d     Output response body of base page and exit."
+   echo "S     Scrap all src html tags. Only relative paths will be scraped."
+   echo "H     Scrap all href html tags. Only relative paths will be scraped."
+   echo
+   echo "Arguments:"
+   echo
+   echo "baseUrsl    Root url used in smoke tests e.g. https://sectigo.com [required]"
+   echo "page        Specific page that needs to be scraped e.g. enterprise [default /]"
+   echo
+}
+
+# Parse the passed options
+
+while getopts ":hdSH" option; do
+	case $option in
+		h) # Display help
+			smoke_help
+			exit;;
+		d) # Debug
+			debug=true
+			;;				
+	  	S) # Set the scrapSrc flag 
+			scrapSrc=true
+			;;
+		H) # Set the scrapHref flag
+			scrapHref=true
+			;;
+	  	\?) # Display help on invalid input
+			smoke_help
+			exit;;		
+   	esac
+done
+shift $((OPTIND -1))
+
+# Check the arguments
+
+if [ $# -eq 0 ]
+	then
+    	_smoke_print_report_failure "You must provide the base url"
+		exit 1
+	else
+		base=$1
+fi
+
+if [ -z "$2" ]
+	then 
+		page=""
+	else
+		page=$2
+fi
+
+
+# Smoke setup
+
+echo
+_smoke_print_report_success "Smoke testing $base/$page"
+echo
+
+smoke_url_prefix "$base"
+
+smoke_header "user-agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:47.0) Gecko/20100101 Firefox/47.0"
+# smoke_header "user-agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.105 Safari/537.36"
+
+# Check the page response
+
+smoke_url_ok "/$page"
+echo 
+
+
+if [ "$debug" = "true" ]
+	then
+	cat $SMOKE_CURL_BODY
+	exit 1
+fi
+
+# Based on the options, scrap the page
+
+IFS=' '
+
+if [ "$scrapSrc" = "true" ]
+	then
+		echo "Scraping relative src tags"
+		SRC_SCRAP=$(sed -n 's/.* src="\/\([^"]*\).*/\1/p'  $SMOKE_CURL_BODY)
+		if [ -z "$SRC_SCRAP" ]
+			then
+				_smoke_print_report_failure "There are no scr tags"
+			else
+				_smoke_print_report_success "Found [$(wc -l <<<"$SRC_SCRAP")]"
+		fi
+		echo
+fi
+
+if [ "$scrapHref" = "true" ]
+	then
+		echo "Scraping relative href tags"
+		HREF_SCRAP=$(sed -n 's/.* href="\/\([^"#]*\).*/\1/p'  $SMOKE_CURL_BODY)
+		if [ -z "$HREF_SCRAP" ]
+			then
+				_smoke_print_report_failure "There are no href tags"
+			else
+				_smoke_print_report_success "Found [$(wc -l <<<"$HREF_SCRAP")]"
+		fi
+		echo		
+fi
+
+# Execute scrapped links
+
+if [ "$scrapSrc" = "true" ] && [ ! -z "$SRC_SCRAP" ]
+	then
+		echo "Testing relative src tags"
+		echo
+		while read link; do smoke_url_ok "/$link"; done <<< "$SRC_SCRAP"
+		echo
+fi 
+
+if [ "$scrapHref" = "true" ] && [ ! -z "$HREF_SCRAP" ]
+	then
+		echo "Testing relative href tags"
+		echo
+		while read link; do smoke_url_ok "/$link"; done <<< "$HREF_SCRAP"
+		echo
+fi
+
+# Your test assertions go here
+
+	# e.g. smoke_assert_body "Hello World"
+
+# Finalize and clean up
+
+smoke_report
+
+echo
