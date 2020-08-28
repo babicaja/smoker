@@ -76,8 +76,13 @@ echo
 
 smoke_url_prefix "$base"
 
-smoke_header "user-agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:47.0) Gecko/20100101 Firefox/47.0"
-# smoke_header "user-agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.105 Safari/537.36"
+if [ -z "$user_agent" ]
+	then 
+		_smoke_print_report_failure "No user agent provided, the user-agent header won't be set"
+		echo
+	else
+		smoke_header "user-agent: $user_agent"
+fi
 
 # Check the page response
 
