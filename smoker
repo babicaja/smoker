@@ -30,11 +30,11 @@ smoker_help()
 smoker_check_stackpath() {
     STRING="$1"
 
-    smoke_response_body | grep --quiet "This website is using a security service to protect itself from online attacks. You performed an action that triggered the service and blocked your request"
+    smoke_response_body | grep -q "This website is using a security service to protect itself from online attacks. You performed an action that triggered the service and blocked your request"
 
     if [[ $? -eq 0 ]]; then
 		echo
-		_smoke_print_report_failure "Blocked by stackpath"
+		_smoke_print_report_failure "Blocked by StackPath"
         exit 1
     fi
 }
@@ -79,7 +79,6 @@ if [ -z "$2" ]
 		page=$2
 fi
 
-
 # Smoke setup
 
 echo
@@ -90,7 +89,7 @@ smoke_url_prefix "$base"
 
 if [ -z "$user_agent" ]
 	then 
-		_smoke_print_report_failure "No user agent provided, the user-agent header won't be set"
+		_smoke_print_report_failure "No user_agent ENV value found, the user-agent header won't be set"
 		echo
 	else
 		smoke_header "user-agent: $user_agent"
